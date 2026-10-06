@@ -1,0 +1,103 @@
+module Kusameter
+  VERSION: String
+
+  type date_input = Date | Time | String
+  type source = :graphql | :search
+
+  def self.configuration: () -> Configuration
+  def self.configure: () { (Configuration) -> void } -> void
+  def self.stats: (String login, ?from: date_input?, ?to: date_input?, ?source: source?,
+                   ?exclude_own: bool, ?exclude_forks: bool, ?exclude_orgs: Array[String],
+                   ?include_orgs: Array[String], ?merged_only: bool) -> Result
+  def self.stats_for: (Array[String] logins, **untyped options) -> Array[Result]
+
+  class Error < StandardError
+  end
+  class ConfigurationError < Error
+  end
+  class InvalidPeriodError < Error
+  end
+  class AuthenticationError < Error
+  end
+  class UserNotFoundError < Error
+  end
+  class RateLimitError < Error
+    attr_reader reset_at: Time?
+    def initialize: (?String message, ?reset_at: Time?) -> void
+  end
+  class APIError < Error
+    attr_reader status: Integer?
+    attr_reader body: String?
+    def initialize: (?String message, ?status: Integer?, ?body: String?) -> void
+  end
+
+  class Configuration
+    attr_accessor token: String?
+    attr_accessor api_endpoint: String
+    attr_accessor graphql_endpoint: String
+    attr_accessor source: source
+    attr_accessor time_zone: String
+    attr_accessor timeout: Integer
+    attr_accessor max_retries: Integer
+    attr_accessor max_rate_limit_wait: Integer
+    attr_accessor logger: untyped
+    def initialize: () -> void
+    def resolved_token: () -> String
+    def today: () -> Date
+    def start_of: (Date date) -> String
+    def end_of: (Date date) -> String
+  end
+
+  class Period
+    attr_reader from: Date
+    attr_reader to: Date
+    def initialize: (from: date_input, to: date_input) -> void
+    def split: () -> Array[Period]
+    def to_h: () -> Hash[Symbol, Date]
+    def with: (**untyped changes) -> Period
+  end
+
+  class Filter
+    attr_reader exclude_own: bool
+    attr_reader exclude_forks: bool
+    attr_reader exclude_orgs: Array[String]
+    attr_reader include_orgs: Array[String]
+    attr_reader merged_only: bool
+    def initialize: (?exclude_own: bool, ?exclude_forks: bool, ?exclude_orgs: Array[String],
+                     ?include_orgs: Array[String], ?merged_only: bool) -> void
+    def match?: (Hash[String, untyped] repo, login: String) -> bool
+    def with: (**untyped changes) -> Filter
+  end
+
+  class RepositoryStat
+    attr_reader name_with_owner: String
+    attr_reader pull_requests: Integer
+    attr_reader commits: Integer
+    attr_reader issues: Integer
+    attr_reader reviews: Integer
+    def initialize: (name_with_owner: String, pull_requests: Integer, commits: Integer,
+                     issues: Integer, reviews: Integer) -> void
+    def to_h: () -> Hash[Symbol, String | Integer]
+    def with: (**untyped changes) -> RepositoryStat
+  end
+
+  class Result
+    attr_reader login: String
+    attr_reader period: Period
+    attr_reader source: source
+    attr_reader pull_requests: Integer
+    attr_reader commits: Integer
+    attr_reader issues: Integer
+    attr_reader reviews: Integer
+    attr_reader by_repository: Array[RepositoryStat]
+    attr_reader warnings: Array[String]
+    def initialize: (login: String, period: Period, source: source,
+                     pull_requests: Integer, commits: Integer, issues: Integer, reviews: Integer,
+                     by_repository: Array[RepositoryStat], warnings: Array[String]) -> void
+    def merge: (Result other) -> Result
+    def total: () -> Integer
+    def truncated?: () -> bool
+    def to_h: () -> Hash[Symbol, untyped]
+    def with: (**untyped changes) -> Result
+  end
+end

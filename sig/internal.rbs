@@ -1,0 +1,22 @@
+module Kusameter
+  class Calculator
+    def initialize: (source: Sources::GraphQL | Sources::Search) -> void
+    def call: (login: String, period: Period, filter: Filter) -> Result
+  end
+
+  module HTTP
+    class Client
+      def initialize: (Configuration) -> void
+    end
+  end
+
+  module Sources
+    class GraphQL
+      def initialize: (client: HTTP::Client, configuration: Configuration) -> void
+    end
+
+    class Search
+      def initialize: (client: HTTP::Client) -> void
+    end
+  end
+end
